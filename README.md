@@ -116,6 +116,88 @@ IndexError: tuple index out of range
 1. O0 is used as the accuracy baseline, and it reach 95.7% accuracy.
 1. Since O3 training fails to produce meaningful loss, optimizer also fails to propagate the training loss. The network remained untrained. So the result is not better than random guess.
 1. O2 has achieved the best accuracy. So we are going to use this trained network to generate the TensorRT engine files.
+
+## Inference using TensorRT
+
+### Throughput of INT8 Engine 
+```cpp
+[07/29/2022-01:16:29] [I] === Performance summary ===
+[07/29/2022-01:16:29] [I] Throughput: 640777 qps
+[07/29/2022-01:16:29] [I] Latency: min = 27.4854 ms, max = 124.657 ms, mean = 97.6132 ms, median = 102.305 ms, percentile(99%) = 116.434 ms
+[07/29/2022-01:16:29] [I] Enqueue Time: min = 0.0397949 ms, max = 0.223877 ms, mean = 0.053646 ms, median = 0.0440569 ms, percentile(99%) = 0.162476 ms
+[07/29/2022-01:16:29] [I] H2D Latency: min = 0.332413 ms, max = 3.64624 ms, mean = 0.863565 ms, median = 0.350952 ms, percentile(99%) = 3.62695 ms
+[07/29/2022-01:16:29] [I] GPU Compute Time: min = 27.0518 ms, max = 123.227 ms, mean = 96.7286 ms, median = 101.81 ms, percentile(99%) = 114.215 ms
+[07/29/2022-01:16:29] [I] D2H Latency: min = 0.00805664 ms, max = 0.0943604 ms, mean = 0.0209501 ms, median = 0.0175781 ms, percentile(99%) = 0.0773315 ms
+[07/29/2022-01:16:29] [I] Total Host Walltime: 7.97751 s
+[07/29/2022-01:16:29] [I] Total GPU Compute Time: 60.3587 s
+[07/29/2022-01:16:29] [W] * GPU compute time is unstable, with coefficient of variance = 18.2805%.
+[07/29/2022-01:16:29] [W]   If not already in use, locking GPU clock frequency or adding --useSpinWait may improve the stability.
+[07/29/2022-01:16:29] [I] Explanations of the performance metrics are printed in the verbose logs.
+```
+
+### Accuracy of INT8 Engine 
+
+blah blah 
+
+### Throughput of FP16 Engine 
+```cpp
+[07/29/2022-01:15:05] [I] === Performance summary ===
+[07/29/2022-01:15:05] [I] Throughput: 641261 qps
+[07/29/2022-01:15:05] [I] Latency: min = 27.4814 ms, max = 121.777 ms, mean = 97.5011 ms, median = 102.247 ms, percentile(99%) = 114.755 ms
+[07/29/2022-01:15:05] [I] Enqueue Time: min = 0.0400391 ms, max = 0.186523 ms, mean = 0.0542541 ms, median = 0.0444336 ms, percentile(99%) = 0.142578 ms
+[07/29/2022-01:15:05] [I] H2D Latency: min = 0.332458 ms, max = 3.66357 ms, mean = 0.857784 ms, median = 0.349609 ms, percentile(99%) = 3.61523 ms
+[07/29/2022-01:15:05] [I] GPU Compute Time: min = 27.1294 ms, max = 120.013 ms, mean = 96.6216 ms, median = 101.69 ms, percentile(99%) = 113.714 ms
+[07/29/2022-01:15:05] [I] D2H Latency: min = 0.00878906 ms, max = 0.0864258 ms, mean = 0.0216703 ms, median = 0.0180664 ms, percentile(99%) = 0.0756836 ms
+[07/29/2022-01:15:05] [I] Total Host Walltime: 7.95872 s
+[07/29/2022-01:15:05] [I] Total GPU Compute Time: 60.1952 s
+[07/29/2022-01:15:05] [W] * GPU compute time is unstable, with coefficient of variance = 18.2284%.
+[07/29/2022-01:15:05] [W]   If not already in use, locking GPU clock frequency or adding --useSpinWait may improve the stability.
+[07/29/2022-01:15:05] [I] Explanations of the performance metrics are printed in the verbose logs.
+[07/29/2022-01:15:05] [V]
+```
+
+### Accuracy of FP16 Engine 
+blah blah 
+
+### Throughput of TF32 Engine 
+```cpp
+[07/29/2022-01:19:03] [I] === Performance summary ===
+[07/29/2022-01:19:03] [I] Throughput: 640379 qps
+[07/29/2022-01:19:03] [I] Latency: min = 28.6321 ms, max = 118.012 ms, mean = 97.4721 ms, median = 102.356 ms, percentile(99%) = 115.409 ms
+[07/29/2022-01:19:03] [I] Enqueue Time: min = 0.0400391 ms, max = 0.303223 ms, mean = 0.0560361 ms, median = 0.0447388 ms, percentile(99%) = 0.158691 ms
+[07/29/2022-01:19:03] [I] H2D Latency: min = 0.335938 ms, max = 3.62866 ms, mean = 0.892099 ms, median = 0.354248 ms, percentile(99%) = 3.60693 ms
+[07/29/2022-01:19:03] [I] GPU Compute Time: min = 28.1935 ms, max = 117.655 ms, mean = 96.5586 ms, median = 101.875 ms, percentile(99%) = 114.048 ms
+[07/29/2022-01:19:03] [I] D2H Latency: min = 0.0078125 ms, max = 0.106201 ms, mean = 0.0214461 ms, median = 0.0180664 ms, percentile(99%) = 0.0722656 ms
+[07/29/2022-01:19:03] [I] Total Host Walltime: 7.99527 s
+[07/29/2022-01:19:03] [I] Total GPU Compute Time: 60.3491 s
+[07/29/2022-01:19:03] [W] * GPU compute time is unstable, with coefficient of variance = 18.5196%.
+[07/29/2022-01:19:03] [W]   If not already in use, locking GPU clock frequency or adding --useSpinWait may improve the stability.
+[07/29/2022-01:19:03] [I] Explanations of the performance metrics are printed in the verbose logs.
+[07/29/2022-01:19:03] [V]
+```
+
+### Accuracy of TF32 Engine 
+blah blah 
+
+
+### Throughput of FP32 Engine 
+```cpp
+[07/29/2022-01:18:09] [I] === Performance summary ===
+[07/29/2022-01:18:09] [I] Throughput: 641470 qps
+[07/29/2022-01:18:09] [I] Latency: min = 27.3369 ms, max = 121.641 ms, mean = 97.3984 ms, median = 102.28 ms, percentile(99%) = 117.303 ms
+[07/29/2022-01:18:09] [I] Enqueue Time: min = 0.0395508 ms, max = 0.15918 ms, mean = 0.0509855 ms, median = 0.0441895 ms, percentile(99%) = 0.130371 ms
+[07/29/2022-01:18:09] [I] H2D Latency: min = 0.333313 ms, max = 3.63818 ms, mean = 0.886899 ms, median = 0.353027 ms, percentile(99%) = 3.60596 ms
+[07/29/2022-01:18:09] [I] GPU Compute Time: min = 26.9731 ms, max = 121.27 ms, mean = 96.4886 ms, median = 101.631 ms, percentile(99%) = 113.709 ms
+[07/29/2022-01:18:09] [I] D2H Latency: min = 0.0078125 ms, max = 0.108307 ms, mean = 0.0228823 ms, median = 0.019043 ms, percentile(99%) = 0.079834 ms
+[07/29/2022-01:18:09] [I] Total Host Walltime: 7.98167 s
+[07/29/2022-01:18:09] [I] Total GPU Compute Time: 60.3054 s
+[07/29/2022-01:18:09] [W] * GPU compute time is unstable, with coefficient of variance = 18.6894%.
+[07/29/2022-01:18:09] [W]   If not already in use, locking GPU clock frequency or adding --useSpinWait may improve the stability.
+[07/29/2022-01:18:09] [I] Explanations of the performance metrics are printed in the verbose logs.
+```
+
+### Accuracy of FP32 Engine 
+blah blah 
   
 ## Segmentation performance
 

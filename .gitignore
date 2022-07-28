@@ -10,6 +10,7 @@ seg/
 pointnet/__pycache__
 model_conversion/models/
 
+*.cache
 *.pyc
 *.ipynb
 *.engine

@@ -5,6 +5,9 @@ import torch
 import torch.nn.parallel
 import torch.optim as optim
 import torch.utils.data
+import sys
+sys.path.append('..')
+
 from pointnet.dataset import ShapeNetDataset, ModelNetDataset
 from pointnet.model import PointNetCls, feature_transform_regularizer
 import torch.nn.functional as F
@@ -26,7 +29,7 @@ parser.add_argument(
   '--nepoch', type=int, default=250, help='number of epochs to train for')
 parser.add_argument('--outf', type=str, default='cls', help='output folder')
 parser.add_argument('--model', type=str, default='', help='model path')
-parser.add_argument('--dataset', type=str, required=True, help="dataset path")
+parser.add_argument('--dataset', type=str, default='../../dataset/shapenetcore_partanno_segmentation_benchmark_v0', help="dataset path")
 parser.add_argument('--dataset_type', type=str, default='shapenet', help="dataset type shapenet|modelnet40")
 parser.add_argument('--feature_transform', action='store_true', help="use feature transform")
 
@@ -44,7 +47,7 @@ def _load_model():
   print('classes', num_classes)
   classifier = PointNetCls(k=num_classes, feature_transform=opt.feature_transform)
 
-  pth_file = '../utils/cls/cls_model_19.pth'
+  pth_file = '../../models/cls.amp.o2/cls_model_24.pth'
   if not os.path.exists(pth_file):
     print(f'[trace] specified path file {pth_file} not exist, exit')
     exit(-1)
@@ -58,11 +61,14 @@ def _load_model():
 def _export_onnx(torch_model):
 
   print(f'[trace] start to export the onnx file')
+
+  print(f'[trace] test the onnx mode input')
   batch_size = 1
   input = torch.randn(32, 3, 2500, requires_grad=True)
   torch_out = torch_model(input)
+  print(f'[trace] input test done')
 
-  output_file = 'models/point_net_cls.onnx'
+  output_file = '../../models/point_net_cls.onnx'
   torch.onnx.export(torch_model,  # model being run
                     input,  # model input (or a tuple for multiple inputs)
                     output_file,  # where to save the model (can be a file or file-like object)
