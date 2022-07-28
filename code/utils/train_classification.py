@@ -9,6 +9,8 @@ import torch.utils.data
 
 import sys
 
+from apex import amp
+
 sys.path.append("..")
 from pointnet.dataset import ShapeNetDataset, ModelNetDataset
 from pointnet.model import PointNetCls, feature_transform_regularizer
@@ -19,7 +21,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--batchSize', type=int, default=32, help='input batch size')
 parser.add_argument('--num_points', type=int, default=2500, help='input batch size')
 parser.add_argument('--workers', type=int, help='number of data loading workers', default=4)
-parser.add_argument('--nepoch', type=int, default=250, help='number of epochs to train for')
+parser.add_argument('--nepoch', type=int, default=25, help='number of epochs to train for')
 parser.add_argument('--outf', type=str, default='cls', help='output folder')
 parser.add_argument('--model', type=str, default='', help='model path')
 parser.add_argument('--dataset', type=str, required=True, help="dataset path")
@@ -74,7 +76,7 @@ testdataloader = torch.utils.data.DataLoader(
   shuffle=True,
   num_workers=int(opt.workers))
 
-print(len(dataset), len(test_dataset))
+print(f"traindata_len={len(dataset)}, testdata_len={len(test_dataset)}")
 num_classes = len(dataset.classes)
 print('classes', num_classes)
 
@@ -98,11 +100,12 @@ classifier.cuda()
 num_batch = len(dataset) / opt.batchSize
 timing_collection = []
 
+opt_level = 'O1'
+classifier, optimizer = amp.initialize(classifier, optimizer, opt_level=opt_level)
+
+import time
 for epoch in range(opt.nepoch):
   scheduler.step()
-
-  import time
-
   start = time.time()
   for i, data in enumerate(dataloader, 0):
     points, target = data
@@ -115,7 +118,11 @@ for epoch in range(opt.nepoch):
     loss = F.nll_loss(pred, target)
     if opt.feature_transform:
       loss += feature_transform_regularizer(trans_feat) * 0.001
-    loss.backward()
+
+    with amp.scale_loss(loss, optimizer) as scaled_loss:
+      scaled_loss.backward()
+
+    #loss.backward()
     optimizer.step()
     pred_choice = pred.data.max(1)[1]
     correct = pred_choice.eq(target.data).cpu().sum()

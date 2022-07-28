@@ -33,6 +33,13 @@ Use `--feature_transform` to use feature transform.
 
 # Performance
 
+## Training performance
+
+
+* without amp: current epoch used time: 286.7861454486847 seconds
+* with amp O1: current epoch used time: 48.52956676483154 seconds
+* with amp O3: current epoch used time: 47.27082324028015 seconds
+
 ## Classification performance
 
 On ModelNet40:
@@ -52,7 +59,64 @@ On [A subset of shapenet](http://web.stanford.edu/~ericyi/project_page/part_anno
 | this implementation(w/ feature transform) | 97.7 | 
 
 
+## Training using APEX/AMP
 
+> Explanation[https://nvidia.github.io/apex/amp.html]:
+> 1. O0[FP32 training]: Your incoming model should be FP32 already, so this is likely a no-op. O0 can be useful to establish an accuracy baseline.
+> 2. O1[Mixed Precision (recommended for typical use)]: Patch all Torch functions and Tensor methods to cast their inputs according to a whitelist-blacklist model. Whitelist ops (for example, Tensor Core-friendly ops like GEMMs and convolutions) are performed in FP16. Blacklist ops that benefit from FP32 precision (for example, softmax) are performed in FP32. O1 also uses dynamic loss scaling, unless overridden.
+> 3. O2[“Almost FP16” Mixed Precision]: O2 casts the model weights to FP16, patches the model’s forward method to cast input data to FP16, keeps batchnorms in FP32, maintains FP32 master weights, updates the optimizer’s param_groups so that the optimizer.step() acts directly on the FP32 weights (followed by FP32 master weight->FP16 model weight copies if necessary), and implements dynamic loss scaling (unless overridden). Unlike O1, O2 does not patch Torch functions or Tensor methods.
+> 4. O3[FP16 training]: O3 may not achieve the stability of the true mixed precision options O1 and O2. However, it can be useful to establish a speed baseline for your model, against which the performance of O1 and O2 can be compared. If your model uses batch normalization, to establish “speed of light” you can try O3 with the additional property override keep_batchnorm_fp32=True (which enables cudnn batchnorm, as stated earlier).
+
+### Running time comparison
+![Result](metrics/runtime.png)
+
+#### Explanation
+1. as excepted, O1 level has better and more stable performance then O0 level;
+1. O3 is only used as running speed baseline. In this case, the loss function outputs NaN value, which is invalid to update the network for the optimizer. 
+1. unable to run the O1 level due to following error. Note: pytorch-rocm has no such issue, need further investigation.
+ ```log
+ Traceback (most recent call last):
+  File "~/point-cloud/pointnet.pytorch/code/utils/train_classification.py", line 117, in <module>
+    pred, trans, trans_feat = classifier(points)
+  File "/home/noname/anaconda3/envs/pytorch-cuda/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1130, in _call_impl
+    return forward_call(*input, **kwargs)
+  File "~/point-cloud/pointnet.pytorch/code/utils/../pointnet/model.py", line 147, in forward
+    x, trans, trans_feat = self.feat(x)
+  File "/home/noname/anaconda3/envs/pytorch-cuda/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1130, in _call_impl
+    return forward_call(*input, **kwargs)
+  File "~/point-cloud/pointnet.pytorch/code/utils/../pointnet/model.py", line 106, in forward
+    trans = self.stn(x)
+  File "/home/noname/anaconda3/envs/pytorch-cuda/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1130, in _call_impl
+    return forward_call(*input, **kwargs)
+  File "~/point-cloud/pointnet.pytorch/code/utils/../pointnet/model.py", line 32, in forward
+    x = F.relu(self.bn1(self.conv1(x)))
+  File "/home/noname/anaconda3/envs/pytorch-cuda/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1130, in _call_impl
+    return forward_call(*input, **kwargs)
+  File "/home/noname/anaconda3/envs/pytorch-cuda/lib/python3.9/site-packages/torch/nn/modules/conv.py", line 307, in forward
+    return self._conv_forward(input, self.weight, self.bias)
+  File "/home/noname/anaconda3/envs/pytorch-cuda/lib/python3.9/site-packages/torch/nn/modules/conv.py", line 303, in _conv_forward
+    return F.conv1d(input, weight, bias, self.stride,
+  File "/home/noname/anaconda3/envs/pytorch-cuda/lib/python3.9/site-packages/apex/amp/wrap.py", line 21, in wrapper
+    args[i] = utils.cached_cast(cast_fn, args[i], handle.cache)
+  File "/home/noname/anaconda3/envs/pytorch-cuda/lib/python3.9/site-packages/apex/amp/utils.py", line 97, in cached_cast
+    if cached_x.grad_fn.next_functions[1][0].variable is not x:
+IndexError: tuple index out of range
+```
+
+### Accuracy comparison
+|  | Overall Accuracy | 
+| :---: | :---: | 
+| O0 | 0.9578983994432846 | 
+| O1 | N/A | 
+| O2 | 0.976687543493389 | 
+| O3 | 0.1186499652052888 | 
+
+#### Summary
+
+1. O0 is used as the accuracy baseline, and it reach 95.7% accuracy.
+1. Since O3 training fails to produce meaningful loss, optimizer also fails to propagate the training loss. The network remained untrained. So the result is not better than random guess.
+1. O2 has achieved the best accuracy. So we are going to use this trained network to generate the TensorRT engine files.
+  
 ## Segmentation performance
 
 Segmentation on  [A subset of shapenet](http://web.stanford.edu/~ericyi/project_page/part_annotation/index.html).
