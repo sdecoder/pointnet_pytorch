@@ -1,7 +1,11 @@
-# PointNet.pytorch
-This repo is implementation for PointNet(https://arxiv.org/abs/1612.00593) in pytorch. The model is in `pointnet/model.py`.
+# Note
+The original repository is https://github.com/fxia22/pointnet.pytorch. 
+My additional work in this project includes:
+1. using AMP/APEX to accelerating training procedure.
+1. introducing TensorRT to accelerating the inference procedure with INT8/FP16/TF32/FP32.
 
-It is tested with pytorch-1.0.
+# PointNet.pytorch
+This repo is implementation for PointNet(https://arxiv.org/abs/1612.00593) in pytorch. The model is in `pointnet/model.py`. It is tested with pytorch-1.0.
 
 # Download data and running
 
@@ -46,6 +50,8 @@ On [A subset of shapenet](http://web.stanford.edu/~ericyi/project_page/part_anno
 | Original implementation | N/A | 
 | this implementation(w/o feature transform) | 98.1 | 
 | this implementation(w/ feature transform) | 97.7 | 
+
+
 
 ## Segmentation performance
 
