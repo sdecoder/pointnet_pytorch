@@ -12,4 +12,7 @@ model_conversion/models/
 
 *.pyc
 *.ipynb
+*.engine
+*.onnx
 dataset/shapenetcore_partanno_segmentation_benchmark_v0/
+
