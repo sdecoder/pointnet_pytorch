@@ -136,7 +136,7 @@ IndexError: tuple index out of range
 ```
 
 ### Accuracy of INT8 Engine 
-final accuracy 0.9752957550452331
+Final accuracy: 0.9752957550452331
 
 ### Throughput of FP16 Engine 
 ```cpp
@@ -156,7 +156,7 @@ final accuracy 0.9752957550452331
 ```
 
 ### Accuracy of FP16 Engine 
-final accuracy 0.9749478079331941
+Final accuracy: 0.9749478079331941
 
 ### Throughput of TF32 Engine 
 ```cpp
@@ -176,8 +176,7 @@ final accuracy 0.9749478079331941
 ```
 
 ### Accuracy of TF32 Engine 
-final accuracy 0.97633959638135
-
+Final accuracy: 0.97633959638135
 
 ### Throughput of FP32 Engine 
 ```cpp
@@ -196,7 +195,7 @@ final accuracy 0.97633959638135
 ```
 
 ### Accuracy of FP32 Engine 
-final accuracy 0.975991649269311
+Final accuracy: 0.975991649269311
 
 ## Conclusion
 
