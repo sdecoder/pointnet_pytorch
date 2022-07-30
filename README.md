@@ -136,8 +136,7 @@ IndexError: tuple index out of range
 ```
 
 ### Accuracy of INT8 Engine 
-
-blah blah 
+final accuracy 0.9752957550452331
 
 ### Throughput of FP16 Engine 
 ```cpp
@@ -157,7 +156,7 @@ blah blah
 ```
 
 ### Accuracy of FP16 Engine 
-blah blah 
+final accuracy 0.9749478079331941
 
 ### Throughput of TF32 Engine 
 ```cpp
@@ -177,7 +176,7 @@ blah blah
 ```
 
 ### Accuracy of TF32 Engine 
-blah blah 
+final accuracy 0.97633959638135
 
 
 ### Throughput of FP32 Engine 
@@ -197,8 +196,13 @@ blah blah
 ```
 
 ### Accuracy of FP32 Engine 
-blah blah 
-  
+final accuracy 0.975991649269311
+
+## Conclusion
+
+1. In term of throughput, FP16/FP32 has better performance.
+2. In term of accuracy, all engines are relatively close, that is, 97.5%-97.6%.
+
 ## Segmentation performance
 
 Segmentation on  [A subset of shapenet](http://web.stanford.edu/~ericyi/project_page/part_annotation/index.html).

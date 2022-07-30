@@ -76,7 +76,10 @@ def _export_onnx(torch_model):
                     opset_version=15,  # the ONNX version to export the model to
                     do_constant_folding=True,  # whether to execute constant folding for optimization
                     input_names=['input'],  # the model's input names
-                    output_names=['output'])
+                    output_names=['output'],
+                    dynamic_axes={'input': {0: 'batch_size'},  # variable length axes
+                                  'output': {0: 'batch_size'}}
+                    )
 
   print('f[trace] export to onnx file done')
   pass

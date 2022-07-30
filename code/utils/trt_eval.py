@@ -23,6 +23,7 @@ import torch
 import argparse
 from tqdm import tqdm
 
+sys.path.append("..")
 from pointnet.dataset import ShapeNetDataset
 
 TRT_LOGGER = trt.Logger(trt.Logger.WARNING)
@@ -86,20 +87,8 @@ def load_engine(trt_runtime, engine_path):
   engine = trt_runtime.deserialize_cuda_engine(engine_data)
   return engine
 
+def _alloc_mem(engine, context, input_shape):
 
-def main():
-  print("[trace] reach the main entry")
-  args = parser.parse_args()
-  args.cuda = not args.no_cuda and torch.cuda.is_available()
-  device = torch.device("cuda" if args.cuda else "cpu")
-
-  engine_file = '../models/point_net_cls-simplified.engine'
-  if not os.path.exists(engine_file):
-    print(f'[trace] target engine file {engine_file} not found, exit')
-    exit(-1)
-
-  engine = load_engine(trt.Runtime(TRT_LOGGER), engine_file)
-  print('[trace] reach func@allocate_buffers')
   inputs = []
   outputs = []
   bindings = []
@@ -107,14 +96,19 @@ def main():
   binding_to_type = {}
   binding_to_type['input'] = np.float32
   binding_to_type['output'] = np.float32
-  binding_to_type['onnx::MatMul_113'] = np.float32
+  binding_to_type['onnx::MatMul_116'] = np.float32
+
+  binding_idx = engine['input']
+  batch_size = input_shape[0]
+  #(batch_size, 3, 2500)
+  context.set_binding_shape(binding_idx, input_shape)
 
   for binding in engine:
-    print(f'[trace] current binding: {str(binding)}')
+    #print(f'[trace] current binding: {str(binding)}')
     _binding_shape = engine.get_binding_shape(binding)
     _volume = trt.volume(_binding_shape)
-    size = _volume * engine.max_batch_size
-    print(f'[trace] current binding size: {size}')
+    size = _volume * batch_size * -1
+    #print(f'[trace] current binding size: {size}')
     dtype = binding_to_type[str(binding)]
     # Allocate host and device buffers
     host_mem = cuda.pagelocked_empty(size, dtype)
@@ -124,9 +118,25 @@ def main():
     # Append to the appropriate list.
     if engine.binding_is_input(binding):
       inputs.append(HostDeviceMem(host_mem, device_mem))
+
     else:
       outputs.append(HostDeviceMem(host_mem, device_mem))
+  return inputs, outputs, bindings
 
+def main():
+  print("[trace] reach the main entry")
+  args = parser.parse_args()
+  args.cuda = not args.no_cuda and torch.cuda.is_available()
+  device = torch.device("cuda" if args.cuda else "cpu")
+
+  engine_file = '../../models/siamese_network.TF32.engine'
+  if not os.path.exists(engine_file):
+    print(f'[trace] target engine file {engine_file} not found, exit')
+    exit(-1)
+
+  print(f'[trace] test for TensorRT enging file {os.path.basename(engine_file)}')
+  engine = load_engine(trt.Runtime(TRT_LOGGER), engine_file)
+  print('[trace] reach func@allocate_buffers')
   print('[trace] initiating TensorRT object')
   test_dataset = ShapeNetDataset(
     root=opt.dataset,
@@ -141,28 +151,50 @@ def main():
     shuffle=True,
     num_workers=int(opt.workers))
 
-  batch_size = 1
+  shape_changed = True
+  pre_batch_size = -1
   total_correct = 0
   total_testset = 0
   context = engine.create_execution_context()
   stream = cuda.Stream()
+
   for i, data in tqdm(enumerate(testdataloader, 0)):
+
     print(f'[trace] current working index: {i}')
     points, target = data
     target = target[:, 0]
     points = points.transpose(2, 1)
+    '''
     if points.size() != (32, 3, 2500):
       print(f'[warn] wrong data input found at index: {i}')
       continue
+    '''
+    batch_size = points.size(dim=0)
+    if batch_size != pre_batch_size:
+      pre_batch_size = batch_size
+      shape_changed = True
+
+    if shape_changed:
+      # if shape changes, rebinding the input
+      print(f'[trace] the input shape has changed, rebind the input at index {i}')
+      input_shape = (batch_size, 3, 2500)
+      inputs, outputs, bindings = _alloc_mem(engine, context, input_shape)
+      shape_changed = False
+
     np.copyto(inputs[0].host, points.ravel())
     [cuda.memcpy_htod_async(inp.device, inp.host, stream) for inp in inputs]
     # Run inference.
-    context.execute_async(batch_size=batch_size, bindings=bindings, stream_handle=stream.handle)
+    #context.execute_async(batch_size=batch_size, bindings=bindings, stream_handle=stream.handle)
+
+    context.execute_async_v2(bindings=bindings, stream_handle=stream.handle)
     [cuda.memcpy_dtoh_async(out.host, out.device, stream) for out in outputs]
     stream.synchronize()
 
     retObj = torch.from_numpy(outputs[1].host)
-    tensor = torch.reshape(retObj, (32, 16))
+    ele_counter = int(retObj.size(dim=0) / batch_size)
+    print(f'[trace] current batch_size: {batch_size}')
+    print(f'[trace] current ele_counter is {ele_counter} with int(retObj.size(dim=0) = {int(retObj.size(dim=0))}')
+    tensor = torch.reshape(retObj, (batch_size, -1))
     pred_choice = tensor.data.max(1)[1]
     correct = pred_choice.eq(target.data).cpu().sum()
     total_correct += correct.item()

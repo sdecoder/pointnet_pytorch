@@ -131,7 +131,7 @@ def generate_trt_engine():
   calib = utility.Calibrator(dataloader, cache_file, element_bytes, batch_size=batch_size)
   # engine = build_engine_from_onnxmodel_int8(onnxmodel, calib)
 
-  mode: utility.CalibratorMode = utility.CalibratorMode.FP32
+  mode: utility.CalibratorMode = utility.CalibratorMode.TF32
   TRT_LOGGER = trt.Logger()
   EXPLICIT_BATCH = 1 << (int)(trt.NetworkDefinitionCreationFlag.EXPLICIT_BATCH)
 
@@ -173,7 +173,15 @@ def generate_trt_engine():
     engine_file_path = f'../../models/siamese_network.{mode.name}.engine'
     input_channel = 3
     input_image_width = 2500
-    network.get_input(0).shape = [batch_size, input_channel, input_image_width]
+
+    #network.get_input(0).shape = [batch_size, input_channel, input_image_width]
+    profile = builder.create_optimization_profile()
+    min_shape = (1, input_channel, input_image_width)
+    opt_shape = (32, input_channel, input_image_width)
+    max_shape = (64, input_channel, input_image_width)
+    profile.set_shape(network.get_input(0).name, min_shape, opt_shape, max_shape)
+    config.add_optimization_profile(profile)
+
     print(f'[trace] utility.build_engine_common_routine')
     return utility.build_engine_common_routine(network, builder, config, runtime, engine_file_path)
   pass
